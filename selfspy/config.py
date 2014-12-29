@@ -21,3 +21,4 @@ DATA_DIR = '~/.selfspy'
 DBNAME = 'selfspy.sqlite'
 LOCK_FILE = 'selfspy.pid'
 LOCK = None
+PROFILING = None

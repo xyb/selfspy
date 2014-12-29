@@ -44,6 +44,11 @@ class Sniffer:
         self.mouse_button_hook = lambda x: True
         self.mouse_move_hook = lambda x: True
         self.screen_hook = lambda x: True
+        if cfg.PROFILING:
+            import cProfile
+            self.pr = cProfile.Profile()
+            self.pr.enable()
+            self.count = 0
 
     def createAppDelegate(self):
         sc = self
@@ -171,6 +176,13 @@ class Sniffer:
         except:
             AppHelper.stopEventLoop()
             raise
+
+        if cfg.PROFILING:
+            self.count += 1
+            if self.count == int(cfg.PROFILING):
+                self.pr.disable()
+                self.pr.dump_stats('pstats')
+                print 'pstats dumped'
 
 # Cocoa does not provide a good api to get the keycodes, therefore we
 # have to provide our own.

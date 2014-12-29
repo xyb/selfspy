@@ -75,6 +75,8 @@ class ActivityStore:
 
         self.started = NOW()
 
+        self.cache = {}
+
     def trycommit(self):
         self.last_commit = time.time()
         for _ in range(1000):
@@ -108,32 +110,45 @@ class ActivityStore:
         win_width -- the width of the window
         win_height -- the height of the window"""
 
-        cur_process = self.session.query(
-            Process
-        ).filter_by(
-            name=process_name
-        ).scalar()
+        key = 'process:name:%s' % process_name
+        cur_process = self.cache.get(key)
         if not cur_process:
-            cur_process = Process(process_name)
-            self.session.add(cur_process)
+            cur_process = self.session.query(
+                Process
+            ).filter_by(
+                name=process_name
+            ).scalar()
+            if not cur_process:
+                cur_process = Process(process_name)
+                self.session.add(cur_process)
+            self.cache[key] = cur_process
 
-        cur_geometry = self.session.query(
-            Geometry
-        ).filter_by(
-            xpos=win_x,
-            ypos=win_y,
-            width=win_width,
-            height=win_height
-        ).scalar()
+        key = 'geometry:x:%s,y:%s,width:%s,height:%s' % (win_x, win_y,
+                                                         win_width, win_height)
+        cur_geometry = self.cache.get(key)
         if not cur_geometry:
-            cur_geometry = Geometry(win_x, win_y, win_width, win_height)
-            self.session.add(cur_geometry)
+            cur_geometry = self.session.query(
+                Geometry
+            ).filter_by(
+                xpos=win_x,
+                ypos=win_y,
+                width=win_width,
+                height=win_height
+            ).scalar()
+            if not cur_geometry:
+                cur_geometry = Geometry(win_x, win_y, win_width, win_height)
+                self.session.add(cur_geometry)
+            self.cache[key] = cur_geometry
 
-        cur_window = self.session.query(Window).filter_by(title=window_name,
-                                                          process_id=cur_process.id).scalar()
+        key = 'window:title:%s,pid:%s' % (window_name, cur_process.id)
+        cur_window = self.cache.get(key)
         if not cur_window:
-            cur_window = Window(window_name, cur_process.id)
-            self.session.add(cur_window)
+            cur_window = self.session.query(Window).filter_by(title=window_name,
+                                                              process_id=cur_process.id).scalar()
+            if not cur_window:
+                cur_window = Window(window_name, cur_process.id)
+                self.session.add(cur_window)
+            self.cache[key] = cur_window
 
         if not (self.current_window.proc_id == cur_process.id
                 and self.current_window.win_id == cur_window.id):
